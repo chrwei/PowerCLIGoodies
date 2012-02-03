@@ -1,20 +1,21 @@
-﻿$confighostname = "esx4.wilson.local" #host to configure, use the name as shown in vcenter
+﻿$confighostname = "esxhost1" #host to configure, use the name as shown in vcenter
 $switchs = @{
 				#lan traffic
 				"vSWitch0" = @{
 								"activenics" = "vmnic0", "vmnic3";
 								"networks" = 	@{
-													"vLAN1 - Local Network" = @{ "vlan" = "1"; };
-													"vLAN3 - DevNet" = @{ "vlan" = "3"; };
-													"vLAN4 - public" = @{ "vlan" = "4"; };
-													"vLAN5 - NuVOX" = @{ "vlan" = "5"; };
+													"vLAN1 - Default" = @{ "vlan" = "1"; };
+													"vLAN3 - Sales" = @{ "vlan" = "3"; };
+													"vLAN4 - Accounting" = @{ "vlan" = "4"; };
+													"vLAN5 - Internet" = @{ "vlan" = "5"; };
 												}
 							};
 				#iscsi traffic
 				"vSWitch1" = @{
 								"activenics" = "vmnic1", "vmnic2";
 								"networks" = 	@{
-													"SAN" = @{ "vlan" = "0"; }; # 0 means no vlan
+													"SAN" = @{}; # no special settings
+													"VMkernel 0" = @{"vmotion" = $true; }
 												};
 							};
 			}
@@ -30,7 +31,14 @@ $nfs =		@{
 				'cd_iso' = @{ 'path' = '/images/cd_iso';  'host' = '10.254.0.155'; };
 				'scratch' = @{ 'path' = '/media/scratch';  'host' = '10.254.0.1'; };
 			}
-
+$other =	@{
+				'ntpserver' = 'ntphost';
+				'adv' = 	@{
+								"Disk.UseDeviceReset" = 0;
+								"Disk.UseLunReset" = 1;
+								"Disk.MaxLUN" = 50;
+							};
+			}
 				
 
 function do_snapin_check() {
@@ -91,7 +99,7 @@ if ($statusloaded) {
 	$vmHost = Get-vmhost $confighostname
 	
 	foreach($switch in ($switchs.keys | Sort-Object)) {
-		Write-Host "Configuring up $switch"
+		Write-Host "Configuring $switch"
 		$vswitch = Get-VirtualSwitch -VMHost $vmHost -Name $switch -ErrorAction SilentlyContinue
 		if ($vswitch -eq $null) {
 			Write-Host ".Creating $switch"
@@ -120,14 +128,17 @@ if ($statusloaded) {
 			$net = Get-VirtualPortGroup -VMHost $vmHost -VirtualSwitch $vswitch -Name $netname -ErrorAction SilentlyContinue 
 			if($net -eq $null) {
 				Write-Host "..Creating $netname"
-				$net = $vswitch | New-VirtualPortGroup -Name $netname -VLanId $switchs[$switch]['networks'][$netname]['vlan']
+				$net = $vswitch | New-VirtualPortGroup -Name $netname 
+			}
+			if($switchs[$switch]['networks'][$netname]['vlan']) {
+				$net | Set-VirtualPortGroup -VLanId $switchs[$switch]['networks'][$netname]['vlan'] | Out-Null 
 			}
 		}
 	}
-	Write-Host "Configuring up Management Interface"
+	Write-Host "Configuring Management Interface"
 	Get-NicTeamingPolicy -VirtualPortGroup (Get-VirtualPortGroup -VMHost $vmHost -Name "Management Network") | Set-NicTeamingPolicy -InheritFailback $true -InheritFailoverOrder $true -InheritLoadBalancingPolicy $true -InheritNetworkFailoverDetectionPolicy $true -InheritNotifySwitches $true | Out-Null 
 	
-	Write-Host "Setting up VMKernels for ISCSI"
+	Write-Host "Configuring VMKernels for ISCSI"
 	$vswitch = Get-VirtualSwitch -VMHost $vmHost -Name $iscsi['vswitch']
 	$existingIPs = ($vmHost | Get-VMHostNetworkAdapter | Where-object { $_.IP -ne "" } | %{ $_.IP })
 	if ($existingIPs.GetType().FullName -eq "System.String") {
@@ -141,25 +152,21 @@ if ($statusloaded) {
 	    if (!$existingIPs.Contains($ip)) {
 	        $iscsiName = get-iSCSINameFromIndex($num) 
 	        Write-Host ".Creating new VMKernel port $iscsiName with address: $ip"
-	        $vmnic = $vmHost | New-VMHostNetworkAdapter -PortGroup $iscsiName -IP $ip -SubnetMask 255.255.255.0 -ManagementTrafficEnabled $true -VMotionEnabled $false -VirtualSwitch $vswitch 
+	        $vmnic = $vmHost | New-VMHostNetworkAdapter -PortGroup $iscsiName -IP $ip -SubnetMask 255.255.255.0 -ManagementTrafficEnabled $true -VirtualSwitch $vswitch 
 	    } else {
 	        $vmnic = $vmHost | Get-VMHostNetworkAdapter | Where-object { $_.IP -eq $ip }
 			$iscsiName = $vmnic.PortGroupName 
 	        Write-Host ".Configuring existing port group $iscsiName with address: $ip"
 	        if ($vmnic.ManagementTrafficEnabled -eq $false) {
-	            $vmHost | Set-VMHostNetworkAdapter -VirtualNic -ManagementTrafficEnabled $false
-	        }
-	        if ($vmnic.VMotionEnabled) {
-	            $vmHost | Set-VMHostNetworkAdapter -VirtualNic -VMotionEnabled $false
-	        }
-	        if ($vmnic.IPv6Enabled) {
-	            $vmHost | Set-VMHostNetworkAdapter -VirtualNic -IPv6Enabled $false
+	            $vmHost | Set-VMHostNetworkAdapter -VirtualNic $vmnic -ManagementTrafficEnabled $true
 	        }
 #	        if ($vmnic.Mtu -ne $mtu) {
-#	            Write-Warning ([string]::Format("Setting MTU to $mtu on {0}", $vmnic.Name))
 #	            $vmHost | Set-VMHostNetworkAdaptor -VirtualNic -Mtu $mtu
 #	        }
 	    }
+		if($switchs[$iscsi['vswitch']]['networks'].ContainsKey($iscsiName) -and $switchs[$iscsi['vswitch']]['networks'][$iscsiName].ContainsKey('vmotion')) {
+			Set-VMHostNetworkAdapter -VirtualNic $vmnic -VMotionEnabled:$switchs[$iscsi['vswitch']]['networks'][$netname]['vmotion'] -Confirm:$false  | Out-Null 
+		}
 
 	    $activeNic = $iscsi['nics'][$num]
 	    Write-Host ".Configuring NIC teaming policy for port group $iscsiName"
@@ -175,12 +182,30 @@ if ($statusloaded) {
 	        Set-NicTeamingPolicy -VirtualPortGroup $portGroupTeamingPolicy -MakeNicUnused $unusedNics -MakeNicActive $activeNic | Out-Null 
 	    }
 	}
-
-	Write-Host "Setting up ISCSI"
+	
+	foreach($oth in $other.keys) {
+		switch($oth) {
+			'ntpserver' {
+					Write-Host "Configuring NTP"
+					$ntph = Get-VMHostNtpServer -VMHost $vmHost -ErrorAction SilentlyContinue 
+					if ($ntph -ne $null) {
+						Remove-VmHostNtpServer -VMHost $vmHost -NtpServer $ntph -Confirm:$false | Out-Null
+					}
+					Add-VmHostNtpServer -VMHost $vmHost -NtpServer $other[$oth] | Out-Null 
+					Get-VmHostService -VMHost $vmHost | Where-Object {$_.key -eq "ntpd"} | Restart-VMHostService -Confirm:$false | Out-Null
+				}
+			'adv' {
+				foreach($adv in $other[$oth].keys) {
+					Set-AdvancedConfigurationValue $adv $other[$oth][$adv]
+				}
+			}
+		}
+		
+	}
+	
+	
+	Write-Host "Configuring ISCSI"
 	Get-VMHostStorage -VMHost $vmHost | Set-VMHostStorage -SoftwareIScsiEnabled $true |Out-Null 
-	Set-AdvancedConfigurationValue "Disk.UseDeviceReset" 0
-	Set-AdvancedConfigurationValue "Disk.UseLunReset" 1
-	Set-AdvancedConfigurationValue "Disk.MaxLUN" 50
 	
 	$hba = $vmHost | Get-VMHostHba -Type iScsi | Where {$_.Model -eq "iSCSI Software Adapter"}
     foreach($target in $iscsi['targetIPs']){
