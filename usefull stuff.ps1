@@ -7,7 +7,7 @@ Connect-VIServer 'vcenter'
 #disconnect all cdroms
 #Get-VM | Where-Object {$_ | Get-CDDrive | Where-Object { $_.ConnectionState.Connected -eq "true"  } } | Get-CDDrive | Set-CDDrive -Connected $false -Confirm:$false
 #unmap all cdroms
-#Get-VM | Where-Object {$_ | Get-CDDrive | Where-Object { $_.ConnectionState.Connected -eq "true"  } } | Get-CDDrive | Set-CDDrive -NoMedia -Connected $false -StartConnected $false 
+#Get-VM | Where-Object {$_ | Get-CDDrive | Where-Object { $_.IsoPath -ne $null  } } | Get-CDDrive | Set-CDDrive -NoMedia -Connected $false -StartConnected $false -Confirm:$false
 
 #connect all nics
 #Get-VM | Where-Object {$_ | Get-NetworkAdapter | Where-Object { $_.ConnectionState.Connected -eq "false"  } } | Get-NetworkAdapter | Set-NetworkAdapter  -Connected $false -Confirm:$false
