@@ -1,44 +1,44 @@
 ﻿$confighostname = "esxhost1" #host to configure, use the name as shown in vcenter
 $switchs = @{
-				#lan traffic
-				"vSWitch0" = @{
-								"activenics" = "vmnic0", "vmnic3";
-								"networks" = 	@{
-													"vLAN1 - Default" = @{ "vlan" = "1"; };
-													"vLAN3 - Sales" = @{ "vlan" = "3"; };
-													"vLAN4 - Accounting" = @{ "vlan" = "4"; };
-													"vLAN5 - Internet" = @{ "vlan" = "5"; };
-												}
-							};
-				#iscsi traffic
-				"vSWitch1" = @{
-								"activenics" = "vmnic1", "vmnic2";
-								"networks" = 	@{
-													"SAN" = @{}; # no special settings
-													"VMkernel 0" = @{"vmotion" = $true; }
-												};
-							};
-			}
+                #lan traffic
+                "vSWitch0" = @{
+                        "activenics" = "vmnic0", "vmnic3";
+                        "networks" = @{
+                                        "vLAN1 - Default" = @{ "vlan" = "1"; };
+                                        "vLAN3 - Sales" = @{ "vlan" = "3"; };
+                                        "vLAN4 - Accounting" = @{ "vlan" = "4"; };
+                                        "vLAN5 - Internet" = @{ "vlan" = "5"; };
+                                     }
+                            };  
+                #iscsi traffic
+                "vSWitch1" = @{
+                        "activenics" = "vmnic1", "vmnic2";
+                        "networks" = @{
+                                        "SAN" = @{}; # no special settings
+                                        "VMkernel 0" = @{"vmotion" = $true; }
+                                    };
+                            };
+            }
 $iscsi = 	@{
-				'vswitch' = "vSWitch1"; #the vswitch to put iscsi vmkernels in
-				'vmkName' = 'VMkernel'; #this gets an index number added on for each vmk
-				'IPnumber' = "11"; 		#this is the "Y" of the IP in the 10.254.x.Y vmkernel
-				'targetIPs' = "10.254.0.1","10.254.1.1","10.254.2.1","10.254.3.1";
-				'nics' = "vmnic1", "vmnic2", "vmnic1", "vmnic2"; #make in order of binding to the above IP's
-			}
-$nfs =		@{
-				'backup' = @{ 'path' = '/media/data';  'host' = '10.254.0.154'; };
-				'cd_iso' = @{ 'path' = '/images/cd_iso';  'host' = '10.254.0.155'; };
-				'scratch' = @{ 'path' = '/media/scratch';  'host' = '10.254.0.1'; };
-			}
-$other =	@{
-				'ntpserver' = 'ntphost';
-				'adv' = 	@{
-								"Disk.UseDeviceReset" = 0;
-								"Disk.UseLunReset" = 1;
-								"Disk.MaxLUN" = 50;
-							};
-			}
+                'vswitch' = "vSWitch1"; #the vswitch to put iscsi vmkernels in
+                'vmkName' = 'VMkernel'; #this gets an index number added on for each vmk
+                'IPnumber' = "11"; 		#this is the "Y" of the IP in the 10.254.x.Y vmkernel
+                'targetIPs' = "10.254.0.1","10.254.1.1","10.254.2.1","10.254.3.1";
+                'nics' = "vmnic1", "vmnic2", "vmnic1", "vmnic2"; #make in order of binding to the above IP's
+            }
+$nfs =      @{
+                'backup' = @{ 'path' = '/media/data';  'host' = '10.254.0.154'; };
+                'cd_iso' = @{ 'path' = '/images/cd_iso';  'host' = '10.254.0.155'; };
+                'scratch' = @{ 'path' = '/media/scratch';  'host' = '10.254.0.1'; };
+            }
+$other =    @{
+                'ntpserver' = 'ntphost';
+                'adv' = @{
+                            "Disk.UseDeviceReset" = 0;
+                            "Disk.UseLunReset" = 1;
+                            "Disk.MaxLUN" = 50;
+                        };
+            }
 				
 
 function do_snapin_check() {
