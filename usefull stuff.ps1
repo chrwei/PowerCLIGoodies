@@ -28,3 +28,6 @@ Connect-VIServer 'vcenter'
 
 #1 hour 20 second ave cpu usage for all running vm
 #Get-VM | Where-Object {$_.PowerState -eq "PoweredOn"} | select Name, @{N="1Hour CpuAve";E={[System.Math]::Round((Get-Stat -Entity $_ -Stat cpu.usage.average -Realtime | Select -ExpandProperty Value | Measure-Object -Average -Maximum).Average, 2)}}
+
+#find all thin disks
+#Get-VM | Get-HardDisk | Where-Object { $_.storageformat -eq "thin" }
