@@ -208,12 +208,15 @@ if ($statusloaded) {
 	Get-VMHostStorage -VMHost $vmHost | Set-VMHostStorage -SoftwareIScsiEnabled $true |Out-Null 
 	
 	$hba = $vmHost | Get-VMHostHba -Type iScsi | Where {$_.Model -eq "iSCSI Software Adapter"}
-    foreach($target in $iscsi['targetIPs']){
-        if((Get-IScsiHbaTarget -IScsiHba $hba -Type Send | Where {$_.Address -cmatch $target}) -eq $null){
-            Write-Host ".Adding $target"
-            New-IScsiHbaTarget -IScsiHba $hba -Address $target | Out-Null
-        }
-    }
+	foreach($target in $iscsi['targetIPs']){
+		if((Get-IScsiHbaTarget -IScsiHba $hba -Type Send | Where {$_.Address -cmatch $target}) -eq $null){
+			Write-Host ".Adding $target"
+			New-IScsiHbaTarget -IScsiHba $hba -Address $target | Out-Null
+		}
+	}
+	Write-Host "Configuring Round Robin for all SCSI LUNs"
+	Get-VMHost -Name $vmHost | Get-ScsiLun -LunType "disk"|where {$_.MultipathPolicy -ne "RoundRobin"}|Set-ScsiLun -MultipathPolicy RoundRobin  | Out-Null
+
 #esxcli is borked?
 #	$iscsiHbaNumber = $iscsiHba | %{$_.Device}
 #	$esxCli = Get-EsxCli -Server $confighostname
