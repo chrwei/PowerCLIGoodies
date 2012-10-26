@@ -2,6 +2,14 @@
 #guests in a balanced way, and restoring to original hosts when done
 #no edits needed, vcenter will be promtped for
 
+
+
+
+#this code didn't work correctly the last time I tried it, so user beware!  
+#I only have 2 hosts now so I don't need this script anymore, so I won't be fixing it.  
+#feel free to clone and issue a pull req if you fix it
+
+
 $vmHostData = @{}
 $vmGuestData = @{}
 
@@ -17,7 +25,7 @@ function do_snapin_check() {
     $snapins=("VMware.VimAutomation.Core","http://www.vmware.com/support/developer/PowerCLI/index.html"),("VMware.VumAutomation","http://www.vmware.com/support/developer/ps-libs/vumps/")
     foreach ($snapin in $snapins) {
         Add-PSSnapin $snapin[0]
-        if((Get-PSSnapin $snapin[0]) –eq $null){
+        if((Get-PSSnapin $snapin[0]) ï¿½eq $null){
             Write-Host "This script requires" $snapin[0]
             Write-Host "Which can be downloaded free from" $snapin[1]
         } else {
