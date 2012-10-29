@@ -27,6 +27,7 @@ foreach ($vmhost in $vmhosts) {
 }
 
 #example one-offs
+#Get-VMHost | New-Datastore -Nfs -Name 'backup' -Path '/media/data' -NfsHost 10.254.0.154
 #New-Datastore -Nfs -VMHost 'esx2.wilson.local' -Name 'backup' -Path '/media/data' -NfsHost 10.254.0.154
 #New-Datastore -Nfs -VMHost 'esx4.wilson.local' -Name 'backup' -Path '/media/data' -NfsHost 10.254.0.154
 #New-Datastore -Nfs -VMHost 'esx3' -Name 'backup' -Path '/media/data' -NfsHost 10.254.0.154
