@@ -13,7 +13,7 @@ $results = @()
 $vmhosts = Get-VMHost 
 foreach ($vmhost in $vmhosts) {
     Write-Host "Checking $vmhost"
-	$datastores = Get-Datastore -VMHost $vmhost | Where-Object {$_.Type -eq 'NFS'}
+    $datastores = Get-Datastore -VMHost $vmhost | Where-Object {$_.Type -eq 'NFS'}
     foreach ($datastore in $datastores) {
         if(!$datastore.Accessible){
 			$nfshost = $datastore.ExtensionData.Info.NAS.RemoteHost
